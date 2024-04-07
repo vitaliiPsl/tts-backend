@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	
+	_ "github.com/joho/godotenv/autoload"
+	"vitaliiPsl/synthesizer/internal/database"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/server"
 )
 
 func main() {
 	logger.Logger.Info("Spinning up Synthesizer...")
+
+	database.SetupDatabase()
 
 	server := server.New()
 
