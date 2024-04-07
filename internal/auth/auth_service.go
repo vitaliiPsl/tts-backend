@@ -2,9 +2,12 @@ package auth
 
 import (
 	"errors"
+	"os"
+	"vitaliiPsl/synthesizer/internal/email"
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/requests"
+	"vitaliiPsl/synthesizer/internal/token"
 	user_package "vitaliiPsl/synthesizer/internal/user"
 
 	"golang.org/x/crypto/bcrypt"
@@ -13,12 +16,21 @@ import (
 const MinPasswordLength = 8
 
 type AuthService struct {
-	userService *user_package.UserService
+	emailVerificationUrl string
+
+	userService  *user_package.UserService
+	tokenService *token.TokenService
+	emailService *email.EmailService
 }
 
-func NewAuthService(userService *user_package.UserService) *AuthService {
+func NewAuthService(userService *user_package.UserService, tokenService *token.TokenService, emailService *email.EmailService) *AuthService {
+	emailVerificationUrl := os.Getenv("EMAIL_VERIFICATION_URL")
+
 	return &AuthService{
-		userService: userService,
+		emailVerificationUrl: emailVerificationUrl,
+		userService:          userService,
+		tokenService:         tokenService,
+		emailService:         emailService,
 	}
 }
 
@@ -51,11 +63,24 @@ func (s *AuthService) HandleSignUp(req *requests.SignUpRequest) error {
 		Status:   user_package.StatusPending,
 	}
 
-	_, err = s.userService.SaveUser(userDto)
+	savedUser, err := s.userService.SaveUser(userDto)
 	if err != nil {
 		return err
 	}
 
-	// TODO: sent email verification link
-	return nil
+	return s.sendVerificationEmail(savedUser)
+}
+
+func (s *AuthService) sendVerificationEmail(user *user_package.UserDto) error {
+	token, err := s.tokenService.CreateVerificationToken(user.Id, token.PurposeEmailVerification)
+	if err != nil {
+		return err
+	}
+
+	emailVariables := map[string]string{
+		"user_name":         user.Username,
+		"verification_link": s.emailVerificationUrl + token.Token,
+	}
+
+	return s.emailService.SendTemplatedEmail(user.Email, "Email verification", "email_verification.html", emailVariables)
 }

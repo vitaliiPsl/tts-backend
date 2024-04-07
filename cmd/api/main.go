@@ -7,9 +7,11 @@ import (
 
 	"vitaliiPsl/synthesizer/internal/auth"
 	"vitaliiPsl/synthesizer/internal/database"
+	"vitaliiPsl/synthesizer/internal/email"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/router"
 	"vitaliiPsl/synthesizer/internal/server"
+	"vitaliiPsl/synthesizer/internal/token"
 	"vitaliiPsl/synthesizer/internal/user"
 	"vitaliiPsl/synthesizer/internal/validation"
 
@@ -26,9 +28,15 @@ func main() {
 	userRepository := user.NewUserRepository(database.DB)
 	userService := user.NewUserService(userRepository)
 
+
+	tokenRepository := token.NewTokenRepository(database.DB)
+	tokenService := token.NewTokenService(tokenRepository)
+
+	emailService := email.NewEmailService()
+
 	validationService := validation.NewValidationService()
 
-	authenticationService := auth.NewAuthService(userService)
+	authenticationService := auth.NewAuthService(userService, tokenService, emailService)
 	authenticationControler := auth.NewAuthController(authenticationService, validationService)
 
 	router.SetupRoutes(server.App, authenticationControler)
