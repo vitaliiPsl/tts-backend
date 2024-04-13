@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"os"
+	"time"
+	"vitaliiPsl/synthesizer/internal/auth/jwt"
 	"vitaliiPsl/synthesizer/internal/email"
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
@@ -21,9 +23,10 @@ type AuthService struct {
 	userService  *user_package.UserService
 	tokenService *token.TokenService
 	emailService *email.EmailService
+	jwtService   *jwt.JwtService
 }
 
-func NewAuthService(userService *user_package.UserService, tokenService *token.TokenService, emailService *email.EmailService) *AuthService {
+func NewAuthService(userService *user_package.UserService, tokenService *token.TokenService, emailService *email.EmailService, jwtService *jwt.JwtService) *AuthService {
 	emailVerificationUrl := os.Getenv("EMAIL_VERIFICATION_URL")
 
 	return &AuthService{
@@ -31,6 +34,7 @@ func NewAuthService(userService *user_package.UserService, tokenService *token.T
 		userService:          userService,
 		tokenService:         tokenService,
 		emailService:         emailService,
+		jwtService:           jwtService,
 	}
 }
 
@@ -69,6 +73,76 @@ func (s *AuthService) HandleSignUp(req *requests.SignUpRequest) error {
 	}
 
 	return s.sendVerificationEmail(savedUser)
+}
+
+func (s *AuthService) HandleSignIn(req *requests.SignInRequest) (string, error) {
+	logger.Logger.Info("Handling sing in req", "email", req.Email)
+
+	user, err := s.userService.FindByEmail(req.Email)
+	if err != nil {
+		var errNotFound *service_errors.ErrNotFound
+		if !errors.As(err, &errNotFound) {
+			logger.Logger.Error("User with given email doesn't exist", "email", req.Email)
+			return "", &service_errors.ErrUnauthorized{Message: "Invalid username or password"}
+		}
+
+		logger.Logger.Error("Failed to fetch user", "email", req.Email)
+		return "", err
+	}
+
+	if user.Status != user_package.StatusActive {
+		logger.Logger.Error("User is not active", "email", req.Email, "status", user.Status)
+		return "", &service_errors.ErrUnauthorized{Message: "Email not verified"}
+
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		logger.Logger.Error("Incorrect password", "email", req.Email)
+		return "", &service_errors.ErrUnauthorized{Message: "Invalid username or password"}
+	}
+
+	jwtToken, err := s.jwtService.GenerateJWT(user)
+	if err != nil {
+		return "", err
+	}
+
+	logger.Logger.Info("Handled sign in.")
+	return jwtToken, nil
+}
+
+func (s *AuthService) HandleEmailVerification(req *requests.EmailVerificationRequest) error {
+	logger.Logger.Info("Handling email verification", "token", req.Token)
+
+	verificationToken, err := s.tokenService.GetToken(req.Token)
+	if err != nil {
+		return err
+	}
+
+	if verificationToken.Purpose != token.PurposeEmailVerification {
+		logger.Logger.Error("Invalid verification token purpose", "token", req.Token, "purpose", verificationToken.Purpose)
+		return &service_errors.ErrBadRequest{Message: "Invalid token purpose"}
+	}
+
+	if time.Now().After(verificationToken.ExpiresAt) {
+		logger.Logger.Error("Email token expired", "token", req.Token, "expiredAt", verificationToken.ExpiresAt)
+		return &service_errors.ErrBadRequest{Message: "Email token expired"}
+	}
+
+	user, err := s.userService.FindById(verificationToken.UserID)
+	if err != nil {
+		return err
+	}
+
+	user.Status = user_package.StatusActive
+	s.userService.UpdateUser(user.Id, user)
+
+	err = s.tokenService.DeleteTokensForUser(verificationToken.UserID)
+	if err != nil {
+		return err
+	}
+
+	logger.Logger.Info("Verified email address", "userId", verificationToken.UserID)
+	return nil
 }
 
 func (s *AuthService) sendVerificationEmail(user *user_package.UserDto) error {

@@ -30,6 +30,25 @@ func (vs *ValidationService) ValidateSignUpRequest(request *requests.SignUpReque
 
 	return validatePassword(request.Password)
 }
+
+func (vs *ValidationService) ValidateSignInRequest(request *requests.SignInRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return validatePassword(request.Password)
+}
+
+func (vs *ValidationService) ValidateEmailVerificationRequest(request *requests.EmailVerificationRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return nil
+}
+
 func validatePassword(password string) error {
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
 

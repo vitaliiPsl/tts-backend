@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"vitaliiPsl/synthesizer/internal/auth"
+	"vitaliiPsl/synthesizer/internal/auth/jwt"
 	"vitaliiPsl/synthesizer/internal/database"
 	"vitaliiPsl/synthesizer/internal/email"
 	"vitaliiPsl/synthesizer/internal/logger"
@@ -36,7 +37,9 @@ func main() {
 
 	validationService := validation.NewValidationService()
 
-	authenticationService := auth.NewAuthService(userService, tokenService, emailService)
+	jwtService := jwt.NewJwtService()
+
+	authenticationService := auth.NewAuthService(userService, tokenService, emailService, jwtService)
 	authenticationControler := auth.NewAuthController(authenticationService, validationService)
 
 	router.SetupRoutes(server.App, authenticationControler)
