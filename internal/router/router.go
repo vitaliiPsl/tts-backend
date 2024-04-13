@@ -21,6 +21,8 @@ func SetupRoutes(app *fiber.App, authController *auth.AuthController) {
 	auth := api.Group("/auth")
 	auth.Post("/sign-up", authController.HandleSignUp)
 	auth.Post("/sign-in", authController.HandleSignIn)
+	auth.Get("/sso/:provider", authController.HandleSsoSignIn)
+	auth.Post("/sso/:provider/sign-in", authController.HandleSsoCallback)
 	auth.Post("/verify-email", authController.HandleEmailVerification)
 
 }

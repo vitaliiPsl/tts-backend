@@ -7,6 +7,7 @@ import (
 
 	"vitaliiPsl/synthesizer/internal/auth"
 	"vitaliiPsl/synthesizer/internal/auth/jwt"
+	"vitaliiPsl/synthesizer/internal/auth/sso"
 	"vitaliiPsl/synthesizer/internal/database"
 	"vitaliiPsl/synthesizer/internal/email"
 	"vitaliiPsl/synthesizer/internal/logger"
@@ -29,7 +30,6 @@ func main() {
 	userRepository := user.NewUserRepository(database.DB)
 	userService := user.NewUserService(userRepository)
 
-
 	tokenRepository := token.NewTokenRepository(database.DB)
 	tokenService := token.NewTokenService(tokenRepository)
 
@@ -39,7 +39,11 @@ func main() {
 
 	jwtService := jwt.NewJwtService()
 
-	authenticationService := auth.NewAuthService(userService, tokenService, emailService, jwtService)
+	githubConfig := sso.GithubSSOConfig()
+	githubProvider := sso.NewGithubProvider(githubConfig)
+	ssoProviders := map[string]sso.SSOProvider{"github": githubProvider}
+
+	authenticationService := auth.NewAuthService(userService, tokenService, emailService, jwtService, ssoProviders)
 	authenticationControler := auth.NewAuthController(authenticationService, validationService)
 
 	router.SetupRoutes(server.App, authenticationControler)

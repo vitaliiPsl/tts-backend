@@ -65,6 +65,49 @@ func (controller *AuthController) HandleSignIn(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"token": token})
 }
 
+
+func (controller *AuthController) HandleSsoSignIn(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling SSO sign in request...")
+
+	provider := c.Params("provider")
+	if provider == "" {
+		logger.Logger.Warn("SSO provider is missing")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "SSO provider is required."})
+	}
+
+	url, err := controller.authService.HandleSsoSignIn(provider)
+	if err != nil {
+		return service_errors.HandleError(c, err)
+	}
+
+	logger.Logger.Info("Handled SSO sign in request. Redirecting to SSO provider", "url", url)
+	return c.Redirect(url, fiber.StatusFound)
+}
+
+func (controller *AuthController) HandleSsoCallback(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling SSO callback request...")
+
+	provider := c.Params("provider")
+	if provider == "" {
+		logger.Logger.Warn("SSO provider is missing")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "SSO provider is required."})
+	}
+
+	var req requests.SignInWithSSORequest
+	if err := c.BodyParser(&req); err != nil {
+		logger.Logger.Error("Failed to parse SSO callback request", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	jwtToken, err := controller.authService.HandleSSOCallback(provider, req.Code)
+	if err != nil {
+		return service_errors.HandleError(c, err)
+	}
+
+	logger.Logger.Info("Handled SSO callback request.")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"token": jwtToken})
+}
+
 func (controller *AuthController) HandleEmailVerification(c *fiber.Ctx) error {
 	logger.Logger.Info("Handling email verification request...")
 

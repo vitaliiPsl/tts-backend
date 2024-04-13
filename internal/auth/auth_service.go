@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 	"vitaliiPsl/synthesizer/internal/auth/jwt"
+	"vitaliiPsl/synthesizer/internal/auth/sso"
 	"vitaliiPsl/synthesizer/internal/email"
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
@@ -24,9 +25,16 @@ type AuthService struct {
 	tokenService *token.TokenService
 	emailService *email.EmailService
 	jwtService   *jwt.JwtService
+	providers    map[string]sso.SSOProvider
 }
 
-func NewAuthService(userService *user_package.UserService, tokenService *token.TokenService, emailService *email.EmailService, jwtService *jwt.JwtService) *AuthService {
+func NewAuthService(
+	userService *user_package.UserService,
+	tokenService *token.TokenService,
+	emailService *email.EmailService,
+	jwtService *jwt.JwtService,
+	providers map[string]sso.SSOProvider,
+) *AuthService {
 	emailVerificationUrl := os.Getenv("EMAIL_VERIFICATION_URL")
 
 	return &AuthService{
@@ -35,6 +43,7 @@ func NewAuthService(userService *user_package.UserService, tokenService *token.T
 		tokenService:         tokenService,
 		emailService:         emailService,
 		jwtService:           jwtService,
+		providers:            providers,
 	}
 }
 
@@ -107,6 +116,55 @@ func (s *AuthService) HandleSignIn(req *requests.SignInRequest) (string, error) 
 	}
 
 	logger.Logger.Info("Handled sign in.")
+	return jwtToken, nil
+}
+
+func (s *AuthService) HandleSsoSignIn(providerName string) (string, error) {
+	logger.Logger.Info("Handling SSO sign in", "provider", providerName)
+
+	provider, exists := s.providers[providerName]
+	if !exists {
+		return "", &service_errors.ErrBadRequest{Message: "Unsupported SSO provider"}
+	}
+
+	return provider.AuthCodeURL("state-string"), nil
+}
+
+func (s *AuthService) HandleSSOCallback(providerName, code string) (string, error) {
+	logger.Logger.Info("Handling SSO callback", "provider", providerName)
+
+	provider, exists := s.providers[providerName]
+	if !exists {
+		return "", &service_errors.ErrBadRequest{Message: "Unsupported SSO provider"}
+	}
+
+	token, err := provider.Exchange(code)
+	if err != nil {
+		return "", err
+	}
+
+	var user *user_package.UserDto
+	user, err = provider.FetchUserInfo(token)
+	if err != nil {
+		return "", err
+	}
+
+	user.Provider = providerName
+	user.Role = user_package.RoleUser
+	user.Status = user_package.StatusActive
+
+	user, err = s.userService.UpsertUser(user)
+	if err != nil {
+		return "", err
+	}
+
+	var jwtToken string
+	jwtToken, err = s.jwtService.GenerateJWT(user)
+	if err != nil {
+		return "", err
+	}
+
+	logger.Logger.Info("Handled SSO sign in.")
 	return jwtToken, nil
 }
 

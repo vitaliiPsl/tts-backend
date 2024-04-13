@@ -11,6 +11,10 @@ type SignInRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 }
 
+type SignInWithSSORequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
 type EmailVerificationRequest struct {
 	Token    string `json:"token" validate:"required"`
 }
