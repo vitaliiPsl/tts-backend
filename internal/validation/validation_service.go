@@ -40,6 +40,15 @@ func (vs *ValidationService) ValidateSignInRequest(request *requests.SignInReque
 	return validatePassword(request.Password)
 }
 
+func (vs *ValidationService) ValidateVerificationTokenRequest(request *requests.VerificationTokenRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return nil
+}
+
 func (vs *ValidationService) ValidateEmailVerificationRequest(request *requests.EmailVerificationRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
@@ -47,6 +56,15 @@ func (vs *ValidationService) ValidateEmailVerificationRequest(request *requests.
 	}
 
 	return nil
+}
+
+func (vs *ValidationService) ValidatePasswordResetRequest(request *requests.PasswordResetRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return validatePassword(request.Password)
 }
 
 func validatePassword(password string) error {

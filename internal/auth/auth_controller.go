@@ -130,3 +130,49 @@ func (controller *AuthController) HandleEmailVerification(c *fiber.Ctx) error {
 	logger.Logger.Info("Handled email verification.")
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
 }
+
+func (controller *AuthController) HandleSendPasswordResetToken(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling 'send password reset token' request...")
+
+	var req requests.VerificationTokenRequest
+	if err := c.BodyParser(&req); err != nil {
+		logger.Logger.Error("Failed to parse 'send password verification token' request", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if err := controller.validationService.ValidateVerificationTokenRequest(&req); err != nil {
+		logger.Logger.Error("'Send password reset' request didn't pass validation", "message", err.Error(), err)
+		return service_errors.HandleError(c, err)
+	}
+
+	err := controller.authService.HandleSendPasswordResetToken(&req)
+	if err != nil {
+		return service_errors.HandleError(c, err)
+	}
+
+	logger.Logger.Info("Handled 'send password reset token' request.")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+}
+
+func (controller *AuthController) HandleResetPassword(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling password reset request...")
+
+	var req requests.PasswordResetRequest
+	if err := c.BodyParser(&req); err != nil {
+		logger.Logger.Error("Failed to parse password reset request", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if err := controller.validationService.ValidatePasswordResetRequest(&req); err != nil {
+		logger.Logger.Error("Password reset request didn't pass validation", "message", err.Error())
+		return service_errors.HandleError(c, err)
+	}
+
+	err := controller.authService.HandlePasswordReset(&req)
+	if err != nil {
+		return service_errors.HandleError(c, err)
+	}
+
+	logger.Logger.Info("Handled password reset request.")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+}

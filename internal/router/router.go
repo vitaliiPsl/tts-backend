@@ -24,5 +24,6 @@ func SetupRoutes(app *fiber.App, authController *auth.AuthController) {
 	auth.Get("/sso/:provider", authController.HandleSsoSignIn)
 	auth.Post("/sso/:provider/sign-in", authController.HandleSsoCallback)
 	auth.Post("/verify-email", authController.HandleEmailVerification)
-
+	auth.Post("/reset-password", authController.HandleResetPassword)
+	auth.Post("/send-password-reset-email", authController.HandleSendPasswordResetToken)
 }

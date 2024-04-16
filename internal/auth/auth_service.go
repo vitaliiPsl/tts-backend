@@ -20,6 +20,7 @@ const MinPasswordLength = 8
 
 type AuthService struct {
 	emailVerificationUrl string
+	passwordResetUrl     string
 
 	userService  *user_package.UserService
 	tokenService *token.TokenService
@@ -36,9 +37,11 @@ func NewAuthService(
 	providers map[string]sso.SSOProvider,
 ) *AuthService {
 	emailVerificationUrl := os.Getenv("EMAIL_VERIFICATION_URL")
+	passwordResetUrl := os.Getenv("PASSWORD_RESET_URL")
 
 	return &AuthService{
 		emailVerificationUrl: emailVerificationUrl,
+		passwordResetUrl:     passwordResetUrl,
 		userService:          userService,
 		tokenService:         tokenService,
 		emailService:         emailService,
@@ -203,6 +206,71 @@ func (s *AuthService) HandleEmailVerification(req *requests.EmailVerificationReq
 	return nil
 }
 
+func (s *AuthService) HandlePasswordReset(req *requests.PasswordResetRequest) error {
+	logger.Logger.Info("Handling password reset", "token", req.Token)
+
+	verificationToken, err := s.tokenService.GetToken(req.Token)
+	if err != nil {
+		return err
+	}
+
+	if verificationToken.Purpose != token.PurposePasswordReset {
+		logger.Logger.Error("Invalid verification token purpose", "token", req.Token, "purpose", verificationToken.Purpose)
+		return &service_errors.ErrBadRequest{Message: "Invalid token purpose"}
+	}
+
+	if time.Now().After(verificationToken.ExpiresAt) {
+		logger.Logger.Error("Password reset token expired", "token", req.Token, "expiredAt", verificationToken.ExpiresAt)
+		return &service_errors.ErrBadRequest{Message: "Password token expired"}
+	}
+
+	user, err := s.userService.FindById(verificationToken.UserID)
+	if err != nil {
+		return nil
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		logger.Logger.Error("Failed to hash password", "token", req.Token)
+		return err
+	}
+
+	user.Password = string(hashedPassword)
+	_, err = s.userService.UpdateUser(user.Id, user)
+	if err != nil {
+		return err
+	}
+
+	err = s.tokenService.DeleteTokensForUser(verificationToken.UserID)
+	if err != nil {
+		return err
+	}
+
+	logger.Logger.Info("Reset password", "userId", verificationToken.UserID)
+	return nil
+}
+
+func (s *AuthService) HandleSendPasswordResetToken(req *requests.VerificationTokenRequest) error {
+	logger.Logger.Info("Handling resend of password verification token", "email", req.Email)
+
+	user, err := s.userService.FindByEmail(req.Email)
+	if err != nil {
+		return err
+	}
+
+	if user == nil {
+		logger.Logger.Error("User not found", "email", req.Email)
+		return &service_errors.ErrNotFound{Message: "User not found"}
+	}
+
+	if err = s.sendResetPasswordEmail(user); err != nil {
+		return err
+	}
+
+	logger.Logger.Info("Handled resend of password verification token", "email", req.Email)
+	return nil
+}
+
 func (s *AuthService) sendVerificationEmail(user *user_package.UserDto) error {
 	token, err := s.tokenService.CreateVerificationToken(user.Id, token.PurposeEmailVerification)
 	if err != nil {
@@ -215,4 +283,17 @@ func (s *AuthService) sendVerificationEmail(user *user_package.UserDto) error {
 	}
 
 	return s.emailService.SendTemplatedEmail(user.Email, "Email verification", "email_verification.html", emailVariables)
+}
+
+func (s *AuthService) sendResetPasswordEmail(user *user_package.UserDto) error {
+	token, err := s.tokenService.CreateVerificationToken(user.Id, token.PurposePasswordReset)
+	if err != nil {
+		return err
+	}
+
+	emailVariables := map[string]string{
+		"password_reset_link": s.passwordResetUrl + token.Token,
+	}
+
+	return s.emailService.SendTemplatedEmail(user.Email, "Password reset", "reset_password.html", emailVariables)
 }
