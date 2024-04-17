@@ -3,6 +3,8 @@ package router
 import (
 	"vitaliiPsl/synthesizer/internal/auth"
 	"vitaliiPsl/synthesizer/internal/auth/jwt"
+	"vitaliiPsl/synthesizer/internal/history"
+	"vitaliiPsl/synthesizer/internal/router/middleware"
 	"vitaliiPsl/synthesizer/internal/synthesis"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,6 +15,7 @@ func SetupRoutes(
 	app *fiber.App,
 	authController *auth.AuthController,
 	synthesisController *synthesis.SynthesisController,
+	historyController *history.HistoryController,
 	jwtService *jwt.JwtService,
 ) {
 
@@ -35,6 +38,8 @@ func SetupRoutes(
 	authApi.Post("/send-password-reset-email", authController.HandleSendPasswordResetToken)
 
 	synthesisApi := api.Group("/synthesis")
-	synthesisApi.Post("", synthesisController.HandleSynthesis)
+	synthesisApi.Post("", middleware.OpenRoute(jwtService), synthesisController.HandleSynthesis)
 
+	historyApi := api.Group("/history")
+	historyApi.Get("", middleware.ProtectedRoute(jwtService), historyController.HandleFetchHistory)
 }

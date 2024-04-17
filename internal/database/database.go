@@ -3,9 +3,10 @@ package database
 import (
 	"os"
 	"time"
+	"vitaliiPsl/synthesizer/internal/history"
 	"vitaliiPsl/synthesizer/internal/logger"
-	"vitaliiPsl/synthesizer/internal/user"
 	"vitaliiPsl/synthesizer/internal/token"
+	"vitaliiPsl/synthesizer/internal/user"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -36,6 +37,6 @@ func SetupDatabase() {
 	logger.Logger.Info("Connected to the database.")
 
 	logger.Logger.Info("Migrating models...")
-	DB.AutoMigrate(&user.User{}, &token.Token{})
+	DB.AutoMigrate(&user.User{}, &token.Token{}, &history.HistoryRecord{})
 	logger.Logger.Info("Migrated models.")
 }
