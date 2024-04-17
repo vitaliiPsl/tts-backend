@@ -67,6 +67,15 @@ func (vs *ValidationService) ValidatePasswordResetRequest(request *requests.Pass
 	return validatePassword(request.Password)
 }
 
+func (vs *ValidationService) ValidateSynthesisRequest(request *requests.SynthesisRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return nil
+}
+
 func validatePassword(password string) error {
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
 

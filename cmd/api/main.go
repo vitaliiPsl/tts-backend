@@ -13,6 +13,7 @@ import (
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/router"
 	"vitaliiPsl/synthesizer/internal/server"
+	"vitaliiPsl/synthesizer/internal/synthesis"
 	"vitaliiPsl/synthesizer/internal/token"
 	"vitaliiPsl/synthesizer/internal/user"
 	"vitaliiPsl/synthesizer/internal/validation"
@@ -46,7 +47,10 @@ func main() {
 	authenticationService := auth.NewAuthService(userService, tokenService, emailService, jwtService, ssoProviders)
 	authenticationControler := auth.NewAuthController(authenticationService, validationService)
 
-	router.SetupRoutes(server.App, authenticationControler)
+	synthesisService := synthesis.NewSynthesisService()
+	synthesisController := synthesis.NewSynthesisController(synthesisService, validationService)
+
+	router.SetupRoutes(server.App, authenticationControler, synthesisController, jwtService)
 
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	err := server.Listen(fmt.Sprintf(":%d", port))
