@@ -1,8 +1,13 @@
 package error
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"vitaliiPsl/synthesizer/internal/logger"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 func HandleError(ctx *fiber.Ctx, err error) error {
+	logger.Logger.Error(err.Error())
 	switch e := err.(type) {
 	case *ErrNotFound:
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -18,11 +23,9 @@ func HandleError(ctx *fiber.Ctx, err error) error {
 		})
 	case *ErrInternalServer:
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": e.Error(),
 		})
 	case *ErrBadGateway:
 		return ctx.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": e.Error(),
 		})
 	default:
 		return ctx.SendStatus(fiber.StatusInternalServerError)
