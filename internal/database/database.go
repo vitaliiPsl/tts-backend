@@ -7,6 +7,7 @@ import (
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/token"
 	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -37,6 +38,6 @@ func SetupDatabase() {
 	logger.Logger.Info("Connected to the database.")
 
 	logger.Logger.Info("Migrating models...")
-	DB.AutoMigrate(&user.User{}, &token.Token{}, &history.HistoryRecord{})
+	DB.AutoMigrate(&user.User{}, &token.Token{}, &history.HistoryRecord{}, &model.Model{})
 	logger.Logger.Info("Migrated models.")
 }
