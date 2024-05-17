@@ -153,7 +153,6 @@ func (s *AuthService) HandleSSOCallback(providerName, code string) (string, erro
 	}
 
 	user.Provider = providerName
-	user.Role = user_package.RoleUser
 	user.Status = user_package.StatusActive
 
 	user, err = s.userService.UpsertUser(user)

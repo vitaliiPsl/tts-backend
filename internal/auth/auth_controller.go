@@ -4,6 +4,7 @@ import (
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/requests"
+	"vitaliiPsl/synthesizer/internal/user"
 	"vitaliiPsl/synthesizer/internal/validation"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,25 @@ type AuthController struct {
 
 func NewAuthController(authService *AuthService, validationService *validation.ValidationService) *AuthController {
 	return &AuthController{authService: authService, validationService: validationService}
+}
+
+func (controller *AuthController) HandleAuthenticatedUserRequest(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling authenticated user request...")
+
+	tempUser := c.Locals("user")
+	if tempUser == nil {
+		logger.Logger.Error("No user found in context.")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	userDto, ok := tempUser.(*user.UserDto)
+	if !ok {
+		logger.Logger.Error("Failed to convert context value to UserDto")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
+	}
+
+	logger.Logger.Info("Handled authenticated user request.")
+	return c.Status(fiber.StatusOK).JSON(userDto)
 }
 
 func (controller *AuthController) HandleSignUp(c *fiber.Ctx) error {
