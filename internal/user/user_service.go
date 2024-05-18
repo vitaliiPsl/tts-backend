@@ -30,6 +30,10 @@ func (s *UserService) SaveUser(userDto *UserDto) (*UserDto, error) {
 		return nil, &service_errors.ErrBadRequest{Message: "User with this email already exists"}
 	}
 
+	if userDto.Role == "" {
+		userDto.Role = RoleUser
+	}
+	
 	user := ToUserModel(userDto)
 	err = s.repository.Save(user)
 	if err != nil {
