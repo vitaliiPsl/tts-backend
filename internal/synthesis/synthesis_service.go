@@ -2,31 +2,35 @@ package synthesis
 
 import (
 	"encoding/json"
-	"os"
 	"vitaliiPsl/synthesizer/internal/history"
 	"vitaliiPsl/synthesizer/internal/logger"
+	"vitaliiPsl/synthesizer/internal/model"
 	"vitaliiPsl/synthesizer/internal/requests"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type SynthesisService struct {
-	synthesisServiceUrl string
-	historyService      *history.HistoryService
+	modelService   *model.ModelService
+	historyService *history.HistoryService
 }
 
-func NewSynthesisService(historyService *history.HistoryService) *SynthesisService {
-	synthesisServiceUrl := os.Getenv("SYNTHESIS_SERVICE_URL")
+func NewSynthesisService(modelService *model.ModelService, historyService *history.HistoryService) *SynthesisService {
 	return &SynthesisService{
-		synthesisServiceUrl: synthesisServiceUrl,
-		historyService:      historyService,
+		modelService:   modelService,
+		historyService: historyService,
 	}
 }
 
 func (s *SynthesisService) HandleSynthesisRequest(req *requests.SynthesisRequest, userId string) (*SynthesisResponse, error) {
 	logger.Logger.Info("Handling synthesis...", "userId", userId)
 
-	response, err := s.performSynthesis(req)
+	model, err := s.modelService.GetModelById(req.ModelId)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := s.performSynthesis(model, req.Text)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +46,12 @@ func (s *SynthesisService) HandleSynthesisRequest(req *requests.SynthesisRequest
 	return response, nil
 }
 
-func (s *SynthesisService) performSynthesis(req *requests.SynthesisRequest) (*SynthesisResponse, error) {
-	agent := fiber.Post(s.synthesisServiceUrl)
-	agent.JSON(req)
+func (s *SynthesisService) performSynthesis(model *model.ModelDto, text string) (*SynthesisResponse, error) {
+	logger.Logger.Info("Performing synthesis...", "name", model.Name, "language", model.Name, "url", model.Url)
+
+	agent := fiber.Post(model.Url)
+	agent.JSON(fiber.Map{"text": text})
+
 	statusCode, resBody, errs := agent.Bytes()
 	if len(errs) > 0 || statusCode != 200 {
 		logger.Logger.Error("Failed to synthesize speech")

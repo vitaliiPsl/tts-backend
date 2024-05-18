@@ -4,6 +4,7 @@ import (
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/requests"
+	"vitaliiPsl/synthesizer/internal/user"
 	"vitaliiPsl/synthesizer/internal/validation"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,16 +25,21 @@ func NewSynthesisController(synthesisService *SynthesisService, validationServic
 func (controller *SynthesisController) HandleSynthesis(c *fiber.Ctx) error {
 	logger.Logger.Info("Handling speech synthesis...")
 
-	var userId string
 	var ok bool
+	var userDto *user.UserDto
 
-	userIdInterface := c.Locals("userId")
-	if userIdInterface != nil {
-		userId, ok = userIdInterface.(string)
+	tempUser := c.Locals("user")
+	if tempUser != nil {
+		userDto, ok = tempUser.(*user.UserDto)
 		if !ok {
-			logger.Logger.Error("User Id is not a string.")
+			logger.Logger.Error("Failed to convert context value to UserDto")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
 		}
+	}
+
+	userId := ""
+	if userDto != nil {
+		userId = userDto.Id
 	}
 
 	var req requests.SynthesisRequest
