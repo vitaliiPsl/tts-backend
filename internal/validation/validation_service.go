@@ -76,6 +76,15 @@ func (vs *ValidationService) ValidateSynthesisRequest(request *requests.Synthesi
 	return nil
 }
 
+func (vs *ValidationService) ValidateModelRequest(request *requests.ModelRequest) error {
+	if err := vs.v.Struct(request); err != nil {
+		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
+		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+	}
+
+	return nil
+}
+
 func validatePassword(password string) error {
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
 
