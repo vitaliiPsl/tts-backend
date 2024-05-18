@@ -3,6 +3,7 @@ package history
 import (
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
+	"vitaliiPsl/synthesizer/internal/user"
 )
 
 type HistoryService struct {
@@ -28,18 +29,18 @@ func (s *HistoryService) SaveHistoryRecord(dto *HistoryRecordDto) (*HistoryRecor
 	return ToHistoryRecordDto(historyRecord), nil
 }
 
-func (s *HistoryService) GetHistoryRecordsByUserId(userId string, page, limit int) (*PaginatedHistoryResponse, error) {
-	logger.Logger.Info("Fetching history records...", "userId", userId, "page", page, "limit", limit)
+func (s *HistoryService) GetHistoryRecordsByUserId(userDto *user.UserDto, page, limit int) (*PaginatedHistoryResponse, error) {
+	logger.Logger.Info("Fetching history records...", "userId", userDto.Id, "page", page, "limit", limit)
 
 	offset := (page - 1) * limit
 
-	records, err := s.repository.FindByUserId(userId, offset, limit)
+	records, err := s.repository.FindByUserId(userDto.Id, offset, limit)
 	if err != nil {
-		logger.Logger.Error("Failed to fetch history records", "userId", userId)
+		logger.Logger.Error("Failed to fetch history records", "userId", userDto.Id)
 		return nil, &service_errors.ErrInternalServer{Message: "Failed to fetch history records"}
 	}
 
-	totalRecords, err := s.repository.CountByUserId(userId)
+	totalRecords, err := s.repository.CountByUserId(userDto.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -62,19 +63,32 @@ func (s *HistoryService) GetHistoryRecordsByUserId(userId string, page, limit in
 		HasMore:      page < totalPages,
 	}
 
-	logger.Logger.Info("Fetched history records", "userId", userId, "size", len(dtos))
+	logger.Logger.Info("Fetched history records", "userId", userDto.Id, "size", len(dtos))
 	return response, nil
 }
 
-func (s *HistoryService) DeleteHistoryRecordsByUserId(userId string) error {
-	logger.Logger.Info("Deleting history records...", "userId", userId)
+func (s *HistoryService) DeleteHistory(userId string) error {
+	logger.Logger.Info("Deleting history...", "userId", userId)
 
 	err := s.repository.DeleteByUserId(userId)
 	if err != nil {
-		logger.Logger.Error("Failed to delete history records", "userId", userId)
-		return &service_errors.ErrInternalServer{Message: "Failed to delete history records"}
+		logger.Logger.Error("Failed to delete history", "userId", userId)
+		return &service_errors.ErrInternalServer{Message: "Failed to delete history"}
 	}
 
-	logger.Logger.Info("Deleted history records.", "userId", userId)
+	logger.Logger.Info("Deleted history.", "userId", userId)
+	return nil
+}
+
+func (s *HistoryService) DeleteHistoryRecordById(id, userId string) error {
+	logger.Logger.Info("Deleting history record...", "id", id, "userId", userId)
+
+	err := s.repository.DeleteById(id, userId)
+	if err != nil {
+		logger.Logger.Error("Failed to delete history record", "id", id, "userId", userId)
+		return &service_errors.ErrInternalServer{Message: "Failed to delete history record"}
+	}
+
+	logger.Logger.Info("Deleted history record.", "id", id, "userId", userId)
 	return nil
 }

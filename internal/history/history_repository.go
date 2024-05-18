@@ -37,6 +37,11 @@ func (rep *HistoryRepository) CountByUserId(userId string) (int, error) {
 }
 
 func (r *HistoryRepository) DeleteByUserId(userId string) error {
-	result := r.db.Where("user_id = ?", userId).Delete(&HistoryRecord{})
+	result := r.db.Delete(&HistoryRecord{}, "user_id = ?", userId)
+	return result.Error
+}
+
+func (r *HistoryRepository) DeleteById(id, userId string) error {
+	result := r.db.Delete(&HistoryRecord{}, "id = ? AND user_id = ?", id, userId)
 	return result.Error
 }

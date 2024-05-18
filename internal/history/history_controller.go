@@ -3,6 +3,7 @@ package history
 import (
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
+	"vitaliiPsl/synthesizer/internal/user"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,18 +19,15 @@ func NewHistoryController(historyService *HistoryService) *HistoryController {
 func (controller *HistoryController) HandleFetchHistory(c *fiber.Ctx) error {
 	logger.Logger.Info("Handling history request...")
 
-	var userId string
-	var ok bool
-
-	userIdInterface := c.Locals("userId")
-	if userIdInterface == nil {
-		logger.Logger.Error("User Id is not present in context")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
+	tempUser := c.Locals("user")
+	if tempUser == nil {
+		logger.Logger.Error("No user found in context.")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userId, ok = userIdInterface.(string)
+	userDto, ok := tempUser.(*user.UserDto)
 	if !ok {
-		logger.Logger.Error("User Id is not a string.")
+		logger.Logger.Error("Failed to convert context value to UserDto")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
 	}
 
@@ -43,7 +41,7 @@ func (controller *HistoryController) HandleFetchHistory(c *fiber.Ctx) error {
 		limit = 10
 	}
 
-	response, err := controller.service.GetHistoryRecordsByUserId(userId, page, limit)
+	response, err := controller.service.GetHistoryRecordsByUserId(userDto, page, limit)
 	if err != nil {
 		logger.Logger.Error("Failed to handle history request", "message", err.Error())
 		return service_errors.HandleError(c, err)
@@ -51,4 +49,53 @@ func (controller *HistoryController) HandleFetchHistory(c *fiber.Ctx) error {
 
 	logger.Logger.Info("Handled history request.")
 	return c.Status(fiber.StatusOK).JSON(response)
+}
+
+func (controller *HistoryController) DeleteHistory(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling delete history request...")
+
+	tempUser := c.Locals("user")
+	if tempUser == nil {
+		logger.Logger.Error("No user found in context.")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	userDto, ok := tempUser.(*user.UserDto)
+	if !ok {
+		logger.Logger.Error("Failed to convert context value to UserDto")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
+	}
+	controller.service.DeleteHistory(userDto.Id)
+
+	logger.Logger.Info("Handled delete history request.")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+}
+
+func (controller *HistoryController) DeleteHistoryRecord(c *fiber.Ctx) error {
+	logger.Logger.Info("Handling delete history record request...")
+
+	tempUser := c.Locals("user")
+	if tempUser == nil {
+		logger.Logger.Error("No user found in context.")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	userDto, ok := tempUser.(*user.UserDto)
+	if !ok {
+		logger.Logger.Error("Failed to convert context value to UserDto")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
+	}
+
+	recordId := c.Params("id")
+	if recordId == "" {
+		logger.Logger.Error("Record Id is missing.")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Record Id is required",
+		})
+	}
+
+	controller.service.DeleteHistoryRecordById(recordId, userDto.Id)
+
+	logger.Logger.Info("Handled delete history record request.")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
 }
