@@ -11,12 +11,16 @@ import (
 	"vitaliiPsl/synthesizer/internal/logger"
 )
 
-type EmailService struct {
+type EmailService interface {
+	SendTemplatedEmail(toEmail, subject, templateName string, variables map[string]string) error
+}
+
+type EmailServiceImpl struct {
 	fromEmail string
 	dialer    *gomail.Dialer
 }
 
-func NewEmailService() *EmailService {
+func NewEmailService() *EmailServiceImpl {
 	fromEmail := os.Getenv("EMAIL_FROM")
 	host := os.Getenv("SMTP_HOST")
 	username := os.Getenv("SMTP_USERNAME")
@@ -29,16 +33,16 @@ func NewEmailService() *EmailService {
 	}
 
 	dialer := gomail.NewDialer(host, port, username, password)
-	return &EmailService{fromEmail: fromEmail, dialer: dialer}
+	return &EmailServiceImpl{fromEmail: fromEmail, dialer: dialer}
 }
 
-func (s *EmailService) SendTemplatedEmail(toEmail, subject, templateName string, variables map[string]string) error {
+func (s *EmailServiceImpl) SendTemplatedEmail(toEmail, subject, templateName string, variables map[string]string) error {
 	logger.Logger.Info("Sending email", "to", toEmail)
 
-	body, err := s.BuildEmailBody(templateName, variables)
+	body, err := s.buildEmailBody(templateName, variables)
 	if err != nil {
 		logger.Logger.Error("Failed to build email body", "to", toEmail, "error", err)
-		return &service_errors.ErrInternalServer{Message: "Failed to build email body"}
+		return service_errors.NewErrInternalServer("Failed to build email body")
 	}
 
 	m := gomail.NewMessage()
@@ -49,25 +53,25 @@ func (s *EmailService) SendTemplatedEmail(toEmail, subject, templateName string,
 
 	if err := s.dialer.DialAndSend(m); err != nil {
 		logger.Logger.Error("Failed to send email", "to", toEmail, "error", err)
-		return &service_errors.ErrInternalServer{Message: "Failed to send email"}
+		return service_errors.NewErrInternalServer("Failed to send email")
 	}
 
 	return nil
 }
 
-func (s *EmailService) BuildEmailBody(templateName string, data map[string]string) (string, error) {
+func (s *EmailServiceImpl) buildEmailBody(templateName string, data map[string]string) (string, error) {
 	filePath := "templates/" + templateName
 
 	tmpl, err := template.ParseFiles(filePath)
 	if err != nil {
 		logger.Logger.Error("Failed to parse template", "template", templateName, "error", err.Error())
-		return "", &service_errors.ErrInternalServer{Message: "Failed to parse email template"}
+		return "", service_errors.NewErrInternalServer("Failed to parse email template")
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
 		logger.Logger.Error("Failed to execute template", "template", templateName, "error", err.Error())
-		return "", &service_errors.ErrInternalServer{Message: "Failed to execute email"}
+		return "", service_errors.NewErrInternalServer("Failed to execute email")
 	}
 
 	return buf.String(), nil

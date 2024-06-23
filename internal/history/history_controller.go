@@ -1,18 +1,17 @@
 package history
 
 import (
-	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type HistoryController struct {
-	service *HistoryService
+	service HistoryService
 }
 
-func NewHistoryController(historyService *HistoryService) *HistoryController {
+func NewHistoryController(historyService HistoryService) *HistoryController {
 	return &HistoryController{service: historyService}
 }
 
@@ -25,7 +24,7 @@ func (controller *HistoryController) HandleFetchHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userDto, ok := tempUser.(*user.UserDto)
+	userDto, ok := tempUser.(*users.UserDto)
 	if !ok {
 		logger.Logger.Error("Failed to convert context value to UserDto")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
@@ -44,7 +43,7 @@ func (controller *HistoryController) HandleFetchHistory(c *fiber.Ctx) error {
 	response, err := controller.service.GetHistoryRecordsByUserId(userDto, page, limit)
 	if err != nil {
 		logger.Logger.Error("Failed to handle history request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled history request.")
@@ -60,7 +59,7 @@ func (controller *HistoryController) DeleteHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userDto, ok := tempUser.(*user.UserDto)
+	userDto, ok := tempUser.(*users.UserDto)
 	if !ok {
 		logger.Logger.Error("Failed to convert context value to UserDto")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
@@ -80,7 +79,7 @@ func (controller *HistoryController) DeleteHistoryRecord(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userDto, ok := tempUser.(*user.UserDto)
+	userDto, ok := tempUser.(*users.UserDto)
 	if !ok {
 		logger.Logger.Error("Failed to convert context value to UserDto")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})

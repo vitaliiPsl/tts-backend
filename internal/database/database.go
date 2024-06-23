@@ -6,7 +6,7 @@ import (
 	"vitaliiPsl/synthesizer/internal/history"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/token"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 	"vitaliiPsl/synthesizer/internal/model"
 
 	"gorm.io/driver/postgres"
@@ -23,13 +23,13 @@ func SetupDatabase() {
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		logger.Logger.Error("Error connecting to database", "Error message", err)
-		panic(nil)
+		panic(err)
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
 		logger.Logger.Error("Error getting DB from GORM", "Error message", err)
-		panic(nil)
+		panic(err)
 	}
 
 	sqlDB.SetMaxIdleConns(10)
@@ -38,6 +38,6 @@ func SetupDatabase() {
 	logger.Logger.Info("Connected to the database.")
 
 	logger.Logger.Info("Migrating models...")
-	DB.AutoMigrate(&user.User{}, &token.Token{}, &history.HistoryRecord{}, &model.Model{})
+	DB.AutoMigrate(&users.User{}, &token.Token{}, &history.HistoryRecord{}, &model.Model{})
 	logger.Logger.Info("Migrated models.")
 }

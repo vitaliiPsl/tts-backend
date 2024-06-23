@@ -25,7 +25,7 @@ func NewValidationService() *ValidationService {
 func (vs *ValidationService) ValidateSignUpRequest(request *requests.SignUpRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return validatePassword(request.Password)
@@ -34,7 +34,7 @@ func (vs *ValidationService) ValidateSignUpRequest(request *requests.SignUpReque
 func (vs *ValidationService) ValidateSignInRequest(request *requests.SignInRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return validatePassword(request.Password)
@@ -43,7 +43,7 @@ func (vs *ValidationService) ValidateSignInRequest(request *requests.SignInReque
 func (vs *ValidationService) ValidateVerificationTokenRequest(request *requests.VerificationTokenRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return nil
@@ -52,7 +52,7 @@ func (vs *ValidationService) ValidateVerificationTokenRequest(request *requests.
 func (vs *ValidationService) ValidateEmailVerificationRequest(request *requests.EmailVerificationRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return nil
@@ -61,7 +61,7 @@ func (vs *ValidationService) ValidateEmailVerificationRequest(request *requests.
 func (vs *ValidationService) ValidatePasswordResetRequest(request *requests.PasswordResetRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return validatePassword(request.Password)
@@ -70,7 +70,7 @@ func (vs *ValidationService) ValidatePasswordResetRequest(request *requests.Pass
 func (vs *ValidationService) ValidateSynthesisRequest(request *requests.SynthesisRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return nil
@@ -79,7 +79,7 @@ func (vs *ValidationService) ValidateSynthesisRequest(request *requests.Synthesi
 func (vs *ValidationService) ValidateModelRequest(request *requests.ModelRequest) error {
 	if err := vs.v.Struct(request); err != nil {
 		logger.Logger.Error("Request didn't pass validation", "message", err.Error())
-		return &service_errors.ErrBadRequest{Message: "Request didn't pass validation"}
+		return service_errors.NewErrBadRequest("Request didn't pass validation")
 	}
 
 	return nil
@@ -89,9 +89,7 @@ func validatePassword(password string) error {
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
 
 	if len(password) < MinPasswordLength {
-		return &service_errors.ErrBadRequest{
-			Message: fmt.Sprintf("password must be at least %d characters long", MinPasswordLength),
-		}
+		return service_errors.NewErrBadRequest(fmt.Sprintf("password must be at least %d characters long", MinPasswordLength))
 	}
 
 	for _, char := range password {
@@ -108,9 +106,7 @@ func validatePassword(password string) error {
 	}
 
 	if !(hasUpper && hasLower && hasNumber && hasSpecial) {
-		return &service_errors.ErrBadRequest{
-			Message: "Password must include at least one uppercase letter, one lowercase letter, one digit, and one special character",
-		}
+		return service_errors.NewErrBadRequest("Password must include at least one uppercase letter, one lowercase letter, one digit, and one special character")
 	}
 
 	return nil

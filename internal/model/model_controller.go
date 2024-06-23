@@ -1,7 +1,6 @@
 package model
 
 import (
-	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/requests"
 	"vitaliiPsl/synthesizer/internal/validation"
@@ -10,11 +9,11 @@ import (
 )
 
 type ModelController struct {
-	service           *ModelService
+	service           ModelService
 	validationService *validation.ValidationService
 }
 
-func NewModelController(modelService *ModelService, validationService *validation.ValidationService) *ModelController {
+func NewModelController(modelService ModelService, validationService *validation.ValidationService) *ModelController {
 	return &ModelController{service: modelService, validationService: validationService}
 }
 
@@ -29,12 +28,12 @@ func (controller *ModelController) HandleSaveModel(c *fiber.Ctx) error {
 
 	if err := controller.validationService.ValidateModelRequest(&req); err != nil {
 		logger.Logger.Error("Model request didn't pass validation", "message", err.Error(), err)
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	if _, err := controller.service.SaveModel(&req); err != nil {
 		logger.Logger.Error("Failed to handle save model request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled save model request.")
@@ -60,7 +59,7 @@ func (controller *ModelController) HandleUpdateModel(c *fiber.Ctx) error {
 
 	if _, err := controller.service.UpdateModel(modelId, &req); err != nil {
 		logger.Logger.Error("Failed to handle update model request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled update model request.")
@@ -80,7 +79,7 @@ func (controller *ModelController) HandleDeleteModel(c *fiber.Ctx) error {
 
 	if err := controller.service.DeleteModel(modelId); err != nil {
 		logger.Logger.Error("Failed to delete model", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled delete model request.")
@@ -93,7 +92,7 @@ func (controller *ModelController) HandleFetchModels(c *fiber.Ctx) error {
 	response, err := controller.service.GetModels()
 	if err != nil {
 		logger.Logger.Error("Failed to handle models request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled models request.")

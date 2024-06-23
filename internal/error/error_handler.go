@@ -1,33 +1,23 @@
-package error
+package internal_errors
 
 import (
-	"vitaliiPsl/synthesizer/internal/logger"
-
 	"github.com/gofiber/fiber/v2"
+	"vitaliiPsl/synthesizer/internal/logger"
 )
 
-func HandleError(ctx *fiber.Ctx, err error) error {
-	logger.Logger.Error(err.Error())
+func ErrorHandler(ctx *fiber.Ctx, err error) error {
+	logger.Logger.Error("Error while handling request", "error", err.Error())
+
 	switch e := err.(type) {
 	case *ErrNotFound:
-		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": e.Error(),
-		})
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": e.Error()})
 	case *ErrBadRequest:
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": e.Error(),
-		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": e.Error()})
+	case *ErrForbidden:
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": e.Error()})
 	case *ErrUnauthorized:
-		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": e.Error(),
-		})
-	case *ErrInternalServer:
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		})
-	case *ErrBadGateway:
-		return ctx.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-		})
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": e.Error()})
 	default:
-		return ctx.SendStatus(fiber.StatusInternalServerError)
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
 	}
 }

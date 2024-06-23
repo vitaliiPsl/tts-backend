@@ -3,17 +3,17 @@ package auth
 import (
 	"strings"
 	"vitaliiPsl/synthesizer/internal/auth/jwt"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthMiddleware struct {
-	jwtService  *jwt.JwtService
-	userService *user.UserService
+	jwtService  jwt.JwtService
+	userService users.UserService
 }
 
-func NewAuthMiddleware(jwtService *jwt.JwtService, userService *user.UserService) *AuthMiddleware {
+func NewAuthMiddleware(jwtService jwt.JwtService, userService users.UserService) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService:  jwtService,
 		userService: userService,
@@ -37,7 +37,7 @@ func (m *AuthMiddleware) OpenRoute() fiber.Handler {
 	}
 }
 
-func (m *AuthMiddleware) ProtectedRoute(roles ...user.UserRole) fiber.Handler {
+func (m *AuthMiddleware) ProtectedRoute(roles ...users.UserRole) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authorization := c.Get("Authorization")
 		if authorization == "" || !strings.Contains(authorization, "Bearer ") {
@@ -54,13 +54,13 @@ func (m *AuthMiddleware) ProtectedRoute(roles ...user.UserRole) fiber.Handler {
 	}
 }
 
-func (m *AuthMiddleware) fetchUser(c *fiber.Ctx, id string, roles ...user.UserRole) error {
+func (m *AuthMiddleware) fetchUser(c *fiber.Ctx, id string, roles ...users.UserRole) error {
 	userDto, err := m.userService.FindById(id)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	if userDto.Status != user.StatusActive {
+	if userDto.Status != users.StatusActive {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User is not active"})
 	}
 
@@ -72,7 +72,7 @@ func (m *AuthMiddleware) fetchUser(c *fiber.Ctx, id string, roles ...user.UserRo
 	return c.Next()
 }
 
-func (m *AuthMiddleware) checkUserRole(userDto *user.UserDto, roles ...user.UserRole) bool {
+func (m *AuthMiddleware) checkUserRole(userDto *users.UserDto, roles ...users.UserRole) bool {
 	if len(roles) == 0 {
 		return true
 	}

@@ -9,16 +9,21 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 )
 
-type JwtService struct {
+type JwtService interface {
+	GenerateJWT(user *users.UserDto) (string, error)
+	ValidateToken(tokenString string) (*UserClaims, error)
+}
+
+type JwtServiceImpl struct {
 	application     string
 	secretKey       string
 	expirationHours int
 }
 
-func NewJwtService() *JwtService {
+func NewJwtService() *JwtServiceImpl {
 	appName := os.Getenv("APP_NAME")
 	jwtSecretKey := os.Getenv("JWT_SECRET_KEY")
 
@@ -28,14 +33,14 @@ func NewJwtService() *JwtService {
 		panic(fmt.Sprintf("Invalid JWT_EXPIRATION_HOURS value: %v", expirationHours))
 	}
 
-	return &JwtService{
+	return &JwtServiceImpl{
 		application:     appName,
 		secretKey:       jwtSecretKey,
 		expirationHours: expirationHours,
 	}
 }
 
-func (s *JwtService) GenerateJWT(user *user.UserDto) (string, error) {
+func (s *JwtServiceImpl) GenerateJWT(user *users.UserDto) (string, error) {
 	logger.Logger.Info("Generating JWT token...", "userId", user.Id)
 
 	claims := s.createUserClaims(user)
@@ -51,7 +56,7 @@ func (s *JwtService) GenerateJWT(user *user.UserDto) (string, error) {
 	return signedToken, nil
 }
 
-func (s *JwtService) ValidateToken(tokenString string) (*UserClaims, error) {
+func (s *JwtServiceImpl) ValidateToken(tokenString string) (*UserClaims, error) {
 	logger.Logger.Info("Validating JWT token...")
 
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -71,7 +76,7 @@ func (s *JwtService) ValidateToken(tokenString string) (*UserClaims, error) {
 	}
 }
 
-func (s *JwtService) createUserClaims(user *user.UserDto) *UserClaims {
+func (s *JwtServiceImpl) createUserClaims(user *users.UserDto) *UserClaims {
 	return &UserClaims{
 		Id: user.Id,
 		StandardClaims: jwt.StandardClaims{

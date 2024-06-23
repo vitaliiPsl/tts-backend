@@ -1,41 +1,82 @@
-package error
+package internal_errors
 
-type ErrNotFound struct {
+type ErrInternal struct {
 	Message string
 }
 
-func (e *ErrNotFound) Error() string {
+func (e *ErrInternal) Error() string {
 	return e.Message
+}
+
+type ErrNotFound struct {
+	ErrInternal
+}
+
+func NewErrNotFound(message string) *ErrNotFound {
+	return &ErrNotFound{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
 }
 
 type ErrBadRequest struct {
-	Message string
+	ErrInternal
 }
 
-func (e *ErrBadRequest) Error() string {
-	return e.Message
+func NewErrBadRequest(message string) *ErrBadRequest {
+	return &ErrBadRequest{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
+}
+
+type ErrForbidden struct {
+	ErrInternal
+}
+
+func NewErrForbidden(message string) *ErrForbidden {
+	return &ErrForbidden{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
 }
 
 type ErrUnauthorized struct {
-	Message string
+	ErrInternal
 }
 
-func (e *ErrUnauthorized) Error() string {
-	return e.Message
+func NewErrUnauthorized(message string) *ErrUnauthorized {
+	return &ErrUnauthorized{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
 }
 
 type ErrInternalServer struct {
-	Message string
+	ErrInternal
 }
 
-func (e *ErrInternalServer) Error() string {
-	return e.Message
+func NewErrInternalServer(message string) *ErrInternalServer {
+	return &ErrInternalServer{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
 }
 
 type ErrBadGateway struct {
+	ErrInternal
 	Message string
 }
 
-func (e *ErrBadGateway) Error() string {
-	return e.Message
+func NewErrBadGateway(message string) *ErrBadGateway {
+	return &ErrBadGateway{
+		ErrInternal: ErrInternal{
+			Message: message,
+		},
+	}
 }

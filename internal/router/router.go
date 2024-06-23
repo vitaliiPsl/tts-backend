@@ -5,7 +5,7 @@ import (
 	"vitaliiPsl/synthesizer/internal/history"
 	"vitaliiPsl/synthesizer/internal/model"
 	"vitaliiPsl/synthesizer/internal/synthesis"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -40,9 +40,9 @@ func SetupRoutes(
 	authApi.Post("/send-password-reset-email", authController.HandleSendPasswordResetToken)
 
 	modelApi := api.Group("/models")
-	modelApi.Post("", authMiddleware.ProtectedRoute(user.RoleAdmin), modelController.HandleSaveModel)
-	modelApi.Patch(":id", authMiddleware.ProtectedRoute(user.RoleAdmin), modelController.HandleUpdateModel)
-	modelApi.Delete(":id", authMiddleware.ProtectedRoute(user.RoleAdmin), modelController.HandleDeleteModel)
+	modelApi.Post("", authMiddleware.ProtectedRoute(users.RoleAdmin), modelController.HandleSaveModel)
+	modelApi.Patch(":id", authMiddleware.ProtectedRoute(users.RoleAdmin), modelController.HandleUpdateModel)
+	modelApi.Delete(":id", authMiddleware.ProtectedRoute(users.RoleAdmin), modelController.HandleDeleteModel)
 	modelApi.Get("", authMiddleware.OpenRoute(), modelController.HandleFetchModels)
 
 	synthesisApi := api.Group("/synthesis")

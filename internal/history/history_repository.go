@@ -4,20 +4,28 @@ import (
 	"gorm.io/gorm"
 )
 
-type HistoryRepository struct {
+type HistoryRepository interface {
+	Save(record *HistoryRecord) error
+	FindByUserId(userId string, offset, limit int) ([]HistoryRecord, error)
+	CountByUserId(userId string) (int, error)
+	DeleteByUserId(userId string) error
+	DeleteById(id, userId string) error
+}
+
+type HistoryRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewHistoryRepository(db *gorm.DB) *HistoryRepository {
-	return &HistoryRepository{db: db}
+func NewHistoryRepository(db *gorm.DB) *HistoryRepositoryImpl {
+	return &HistoryRepositoryImpl{db: db}
 }
 
-func (r *HistoryRepository) Save(record *HistoryRecord) error {
+func (r *HistoryRepositoryImpl) Save(record *HistoryRecord) error {
 	result := r.db.Save(record)
 	return result.Error
 }
 
-func (r *HistoryRepository) FindByUserId(userId string, offset, limit int) ([]HistoryRecord, error) {
+func (r *HistoryRepositoryImpl) FindByUserId(userId string, offset, limit int) ([]HistoryRecord, error) {
 	var records []HistoryRecord
 
 	result := r.db.Where("user_id = ?", userId).Offset(offset).Limit(limit).Order("created_at desc").Find(&records)
@@ -27,7 +35,7 @@ func (r *HistoryRepository) FindByUserId(userId string, offset, limit int) ([]Hi
 	return records, nil
 }
 
-func (rep *HistoryRepository) CountByUserId(userId string) (int, error) {
+func (rep *HistoryRepositoryImpl) CountByUserId(userId string) (int, error) {
 	var count int64
 	result := rep.db.Model(&HistoryRecord{}).Where("user_id = ?", userId).Count(&count)
 	if result.Error != nil {
@@ -36,12 +44,12 @@ func (rep *HistoryRepository) CountByUserId(userId string) (int, error) {
 	return int(count), nil
 }
 
-func (r *HistoryRepository) DeleteByUserId(userId string) error {
+func (r *HistoryRepositoryImpl) DeleteByUserId(userId string) error {
 	result := r.db.Delete(&HistoryRecord{}, "user_id = ?", userId)
 	return result.Error
 }
 
-func (r *HistoryRepository) DeleteById(id, userId string) error {
+func (r *HistoryRepositoryImpl) DeleteById(id, userId string) error {
 	result := r.db.Delete(&HistoryRecord{}, "id = ? AND user_id = ?", id, userId)
 	return result.Error
 }

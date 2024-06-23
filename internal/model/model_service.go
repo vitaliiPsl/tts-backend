@@ -9,27 +9,35 @@ import (
 	"gorm.io/gorm"
 )
 
-type ModelService struct {
-	repository *ModelRepository
+type ModelService interface {
+	SaveModel(req *requests.ModelRequest) (*ModelDto, error)
+	UpdateModel(id string, req *requests.ModelRequest) (*ModelDto, error)
+	DeleteModel(id string) error
+	GetModelById(modelId string) (*ModelDto, error)
+	GetModels() ([]ModelDto, error)
 }
 
-func NewModelService(repo *ModelRepository) *ModelService {
-
-	return &ModelService{repository: repo}
+type ModelServiceImpl struct {
+	repository ModelRepository
 }
 
-func (s *ModelService) SaveModel(req *requests.ModelRequest) (*ModelDto, error) {
+func NewModelService(repo ModelRepository) *ModelServiceImpl {
+
+	return &ModelServiceImpl{repository: repo}
+}
+
+func (s *ModelServiceImpl) SaveModel(req *requests.ModelRequest) (*ModelDto, error) {
 	logger.Logger.Info("Saving model...", "name", req.Name, "language", req.Language)
 
 	existing, err := s.repository.FindByNameAndLanguage(req.Name, req.Language)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Logger.Error("Failed to model", "name", req.Name, "language", req.Language)
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to model by name and language"}
+		return nil, service_errors.NewErrInternalServer("Failed to model by name and language")
 	}
 
 	if existing != nil {
 		logger.Logger.Error("Model with given name and language already exists", "name", req.Name, "language", req.Language)
-		return nil, &service_errors.ErrBadRequest{Message: "Model with this name and language already exists"}
+		return nil, service_errors.NewErrBadRequest("Model with this name and language already exists")
 	}
 
 	model := &Model{
@@ -41,36 +49,36 @@ func (s *ModelService) SaveModel(req *requests.ModelRequest) (*ModelDto, error) 
 	err = s.repository.Save(model)
 	if err != nil {
 		logger.Logger.Error("Failed to save model", "name", model.Name, "language", "model.Language")
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to save model"}
+		return nil, service_errors.NewErrInternalServer("Failed to save model")
 	}
 
 	logger.Logger.Info("Saved model.", "id", model.Id, "name", model.Name, "language", model.Language)
 	return ToModelDto(model), nil
 }
 
-func (s *ModelService) UpdateModel(id string, req *requests.ModelRequest) (*ModelDto, error) {
+func (s *ModelServiceImpl) UpdateModel(id string, req *requests.ModelRequest) (*ModelDto, error) {
 	logger.Logger.Info("Updating model...", "id", id, "url", req.Url, "name", req.Name, "language", req.Language)
 
 	model, err := s.repository.FindById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Logger.Error("Model not found", "id", id)
-			return nil, &service_errors.ErrNotFound{Message: "Model not found"}
+			return nil, service_errors.NewErrNotFound("Model not found")
 		}
 
 		logger.Logger.Error("Failed to fetch model", "id", id)
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to fetch model"}
+		return nil, service_errors.NewErrInternalServer("Failed to fetch model")
 	}
 
 	existing, err := s.repository.FindByNameAndLanguage(req.Name, req.Language)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Logger.Error("Failed to fetch existing model", "name", req.Name, "language", req.Language)
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to fetch model by name and language"}
+		return nil, service_errors.NewErrInternalServer("Failed to fetch model by name and language")
 	}
 
 	if existing != nil && existing.Id != model.Id {
 		logger.Logger.Error("Model with given name and language already exists", "name", req.Name, "language", req.Language)
-		return nil, &service_errors.ErrBadRequest{Message: "Model with this name and language already exists"}
+		return nil, service_errors.NewErrBadRequest("Model with this name and language already exists")
 	}
 
 	if req.Url != "" {
@@ -88,57 +96,62 @@ func (s *ModelService) UpdateModel(id string, req *requests.ModelRequest) (*Mode
 	err = s.repository.Save(model)
 	if err != nil {
 		logger.Logger.Error("Failed to update model", "id", model.Id)
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to update model"}
+		return nil, service_errors.NewErrInternalServer("Failed to update model")
 	}
 
 	logger.Logger.Info("Updated model.", "id", model.Id, "url", model.Url, "name", model.Name, "language", model.Language)
 	return ToModelDto(model), nil
 }
 
-func (s *ModelService) DeleteModel(id string) error {
+func (s *ModelServiceImpl) DeleteModel(id string) error {
 	logger.Logger.Info("Deleting model...", "id", id)
 
 	model, err := s.repository.FindById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Logger.Error("Model not found", "id", id)
-			return &service_errors.ErrNotFound{Message: "Model not found"}
+			return service_errors.NewErrNotFound("Model not found")
 		}
 
 		logger.Logger.Error("Failed to fetch model", "id", id)
-		return &service_errors.ErrInternalServer{Message: "Failed to fetch model by Id"}
+		return service_errors.NewErrInternalServer("Failed to fetch model by Id")
 	}
 
 	err = s.repository.DeleteById(model.Id)
 	if err != nil {
 		logger.Logger.Error("Failed to delete model", "id", id)
-		return &service_errors.ErrInternalServer{Message: "Failed to delete model"}
+		return service_errors.NewErrInternalServer("Failed to delete model")
 	}
 
 	logger.Logger.Info("Deleted model.", "id", id)
 	return nil
 }
 
-func (s *ModelService) GetModelById(modelId string) (*ModelDto, error) {
+func (s *ModelServiceImpl) GetModelById(modelId string) (*ModelDto, error) {
 	logger.Logger.Info("Fetching model...", "modelId", modelId)
 
 	model, err := s.repository.FindById(modelId)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Logger.Error("Model not found", "id", modelId)
+			return nil, service_errors.NewErrNotFound("Model not found")
+		}
+
 		logger.Logger.Error("Failed to fetch models")
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to fetch models"}
+		return nil, service_errors.NewErrInternalServer("Failed to fetch models")
 	}
 
 	logger.Logger.Info("Fetched model", "modelId", modelId)
 	return ToModelDto(model), nil
 }
 
-func (s *ModelService) GetModels() ([]ModelDto, error) {
+func (s *ModelServiceImpl) GetModels() ([]ModelDto, error) {
 	logger.Logger.Info("Fetching models...")
 
 	records, err := s.repository.FindAll()
 	if err != nil {
 		logger.Logger.Error("Failed to fetch models")
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to fetch models"}
+		return nil, service_errors.NewErrInternalServer("Failed to fetch models")
 	}
 
 	dtos := make([]ModelDto, len(records))

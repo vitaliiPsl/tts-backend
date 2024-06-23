@@ -10,19 +10,23 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type SynthesisService struct {
-	modelService   *model.ModelService
-	historyService *history.HistoryService
+type SynthesisService interface {
+	HandleSynthesisRequest(req *requests.SynthesisRequest, userId string) (*SynthesisResponse, error)
 }
 
-func NewSynthesisService(modelService *model.ModelService, historyService *history.HistoryService) *SynthesisService {
-	return &SynthesisService{
+type SynthesisServiceImpl struct {
+	modelService   model.ModelService
+	historyService history.HistoryService
+}
+
+func NewSynthesisService(modelService model.ModelService, historyService history.HistoryService) *SynthesisServiceImpl {
+	return &SynthesisServiceImpl{
 		modelService:   modelService,
 		historyService: historyService,
 	}
 }
 
-func (s *SynthesisService) HandleSynthesisRequest(req *requests.SynthesisRequest, userId string) (*SynthesisResponse, error) {
+func (s *SynthesisServiceImpl) HandleSynthesisRequest(req *requests.SynthesisRequest, userId string) (*SynthesisResponse, error) {
 	logger.Logger.Info("Handling synthesis...", "userId", userId)
 
 	model, err := s.modelService.GetModelById(req.ModelId)
@@ -46,7 +50,7 @@ func (s *SynthesisService) HandleSynthesisRequest(req *requests.SynthesisRequest
 	return response, nil
 }
 
-func (s *SynthesisService) performSynthesis(model *model.ModelDto, text string) (*SynthesisResponse, error) {
+func (s *SynthesisServiceImpl) performSynthesis(model *model.ModelDto, text string) (*SynthesisResponse, error) {
 	logger.Logger.Info("Performing synthesis...", "name", model.Name, "language", model.Name, "url", model.Url)
 
 	agent := fiber.Post(model.Url)
@@ -68,7 +72,7 @@ func (s *SynthesisService) performSynthesis(model *model.ModelDto, text string) 
 	return response, nil
 }
 
-func (s *SynthesisService) saveHistoryRecord(req *requests.SynthesisRequest, userId string) error {
+func (s *SynthesisServiceImpl) saveHistoryRecord(req *requests.SynthesisRequest, userId string) error {
 	historyDto := &history.HistoryRecordDto{
 		UserId: userId,
 		Text:   req.Text,

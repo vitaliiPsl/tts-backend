@@ -1,10 +1,9 @@
 package auth
 
 import (
-	service_errors "vitaliiPsl/synthesizer/internal/error"
 	"vitaliiPsl/synthesizer/internal/logger"
 	"vitaliiPsl/synthesizer/internal/requests"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 	"vitaliiPsl/synthesizer/internal/validation"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,7 +27,7 @@ func (controller *AuthController) HandleAuthenticatedUserRequest(c *fiber.Ctx) e
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userDto, ok := tempUser.(*user.UserDto)
+	userDto, ok := tempUser.(*users.UserDto)
 	if !ok {
 		logger.Logger.Error("Failed to convert context value to UserDto")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{})
@@ -49,12 +48,12 @@ func (controller *AuthController) HandleSignUp(c *fiber.Ctx) error {
 
 	if err := controller.validationService.ValidateSignUpRequest(&req); err != nil {
 		logger.Logger.Error("Sign up request didn't pass validation", "message", err.Error(), err)
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	if err := controller.authService.HandleSignUp(&req); err != nil {
 		logger.Logger.Error("Failed to handle sign up request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled sign up request.")
@@ -72,19 +71,18 @@ func (controller *AuthController) HandleSignIn(c *fiber.Ctx) error {
 
 	if err := controller.validationService.ValidateSignInRequest(&req); err != nil {
 		logger.Logger.Error("Sign in request didn't pass validation", "message", err.Error(), err)
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	token, err := controller.authService.HandleSignIn(&req)
 	if err != nil {
 		logger.Logger.Error("Failed to handle sign in request", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled sign in request.")
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"token": token})
 }
-
 
 func (controller *AuthController) HandleSsoSignIn(c *fiber.Ctx) error {
 	logger.Logger.Info("Handling SSO sign in request...")
@@ -97,7 +95,7 @@ func (controller *AuthController) HandleSsoSignIn(c *fiber.Ctx) error {
 
 	url, err := controller.authService.HandleSsoSignIn(provider)
 	if err != nil {
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled SSO sign in request. Redirecting to SSO provider", "url", url)
@@ -121,7 +119,7 @@ func (controller *AuthController) HandleSsoCallback(c *fiber.Ctx) error {
 
 	jwtToken, err := controller.authService.HandleSSOCallback(provider, req.Code)
 	if err != nil {
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled SSO callback request.")
@@ -139,12 +137,12 @@ func (controller *AuthController) HandleEmailVerification(c *fiber.Ctx) error {
 
 	if err := controller.validationService.ValidateEmailVerificationRequest(&req); err != nil {
 		logger.Logger.Error("Password reset request didn't pass validation", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	err := controller.authService.HandleEmailVerification(&req)
 	if err != nil {
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled email verification.")
@@ -162,12 +160,12 @@ func (controller *AuthController) HandleSendPasswordResetToken(c *fiber.Ctx) err
 
 	if err := controller.validationService.ValidateVerificationTokenRequest(&req); err != nil {
 		logger.Logger.Error("'Send password reset' request didn't pass validation", "message", err.Error(), err)
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	err := controller.authService.HandleSendPasswordResetToken(&req)
 	if err != nil {
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled 'send password reset token' request.")
@@ -185,12 +183,12 @@ func (controller *AuthController) HandleResetPassword(c *fiber.Ctx) error {
 
 	if err := controller.validationService.ValidatePasswordResetRequest(&req); err != nil {
 		logger.Logger.Error("Password reset request didn't pass validation", "message", err.Error())
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	err := controller.authService.HandlePasswordReset(&req)
 	if err != nil {
-		return service_errors.HandleError(c, err)
+		return err
 	}
 
 	logger.Logger.Info("Handled password reset request.")

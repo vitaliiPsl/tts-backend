@@ -1,6 +1,8 @@
 package server
 
 import (
+	internal_errors "vitaliiPsl/synthesizer/internal/error"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -10,7 +12,9 @@ type FiberServer struct {
 
 func New() *FiberServer {
 	server := &FiberServer{
-		App: fiber.New(),
+		App: fiber.New(fiber.Config{
+			ErrorHandler: internal_errors.ErrorHandler,
+		}),
 	}
 
 	return server

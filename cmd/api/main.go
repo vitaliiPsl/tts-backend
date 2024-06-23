@@ -17,7 +17,7 @@ import (
 	"vitaliiPsl/synthesizer/internal/server"
 	"vitaliiPsl/synthesizer/internal/synthesis"
 	"vitaliiPsl/synthesizer/internal/token"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 	"vitaliiPsl/synthesizer/internal/validation"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -30,8 +30,8 @@ func main() {
 
 	server := server.New()
 
-	userRepository := user.NewUserRepository(database.DB)
-	userService := user.NewUserService(userRepository)
+	userRepository := users.NewUserRepository(database.DB)
+	userService := users.NewUserService(userRepository)
 
 	tokenRepository := token.NewTokenRepository(database.DB)
 	tokenService := token.NewTokenService(tokenRepository)

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/oauth2"
 	service_errors "vitaliiPsl/synthesizer/internal/error"
-	"vitaliiPsl/synthesizer/internal/user"
+	"vitaliiPsl/synthesizer/internal/users"
 )
 
 const (
@@ -31,20 +31,20 @@ func (p *GithubProvider) Exchange(code string) (*oauth2.Token, error) {
 	return p.config.Exchange(context.Background(), code)
 }
 
-func (p *GithubProvider) FetchUserInfo(token *oauth2.Token) (*user.UserDto, error) {
+func (p *GithubProvider) FetchUserInfo(token *oauth2.Token) (*users.UserDto, error) {
 	client := p.config.Client(context.Background(), token)
 	resp, err := client.Get(USER_INFO_ENDPOINT)
 	if err != nil {
-		return nil, &service_errors.ErrBadGateway{Message: "Failed to fetch user info"}
+		return nil, service_errors.NewErrBadGateway("Failed to fetch user info")
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to read user info"}
+		return nil, service_errors.NewErrInternalServer("Failed to read user info")
 	}
 
-	var user *user.UserDto
+	var user *users.UserDto
 	user, err = p.buildUserModel(data)
 	if err != nil {
 		return nil, err
@@ -64,13 +64,13 @@ func (p *GithubProvider) fetchUserEmail(token *oauth2.Token) (string, error) {
 	client := p.config.Client(context.Background(), token)
 	resp, err := client.Get(USER_EMAIL_ENDPOINT)
 	if err != nil {
-		return "", &service_errors.ErrBadGateway{Message: "Failed to fetch user email"}
+		return "", service_errors.NewErrBadGateway("Failed to fetch user email")
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", &service_errors.ErrInternalServer{Message: "Failed to read user email"}
+		return "", service_errors.NewErrInternalServer("Failed to read user email")
 	}
 
 	var githubEmails []struct {
@@ -79,7 +79,7 @@ func (p *GithubProvider) fetchUserEmail(token *oauth2.Token) (string, error) {
 		Verified bool   `json:"verified"`
 	}
 	if err := json.Unmarshal(data, &githubEmails); err != nil {
-		return "", &service_errors.ErrInternalServer{Message: "Failed to unmarshal user email"}
+		return "", service_errors.NewErrInternalServer("Failed to unmarshal user email")
 	}
 
 	for _, email := range githubEmails {
@@ -88,10 +88,10 @@ func (p *GithubProvider) fetchUserEmail(token *oauth2.Token) (string, error) {
 		}
 	}
 
-	return "", &service_errors.ErrNotFound{Message: "User email not found"}
+	return "", service_errors.NewErrNotFound("User email not found")
 }
 
-func (p *GithubProvider) buildUserModel(data []byte) (*user.UserDto, error) {
+func (p *GithubProvider) buildUserModel(data []byte) (*users.UserDto, error) {
 	var githubUser struct {
 		Login     string `json:"login"`
 		Email     string `json:"email"`
@@ -99,10 +99,10 @@ func (p *GithubProvider) buildUserModel(data []byte) (*user.UserDto, error) {
 	}
 
 	if err := json.Unmarshal(data, &githubUser); err != nil {
-		return nil, &service_errors.ErrInternalServer{Message: "Failed to unmarshal user info"}
+		return nil, service_errors.NewErrInternalServer("Failed to unmarshal user info")
 	}
 
-	return &user.UserDto{
+	return &users.UserDto{
 		Email:      githubUser.Email,
 		Username:   githubUser.Login,
 		PictureUrl: githubUser.AvatarURL,
